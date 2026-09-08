@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>포치의 당근밭 뽑기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gowun+Dodum&display=swap">
+<style>
+  :root{
+    --sky:#4F9FE6; --sky2:#A8D5F4; --sky3:#E3F2FC; --cloud:#FFFFFF; --cloud-shade:#D6E8F5; --star:0;
+    --far:#8FB9A0; --tree:#5E9455; --tree2:#3F7A3F;
+    --wood:#B98455; --wood2:#8E6238; --wood3:#D9A86F;
+    --soil:#7C4B2A; --soil2:#5A331A; --soil3:#9A6440; --hole:#2E1608;
+    --bg:#EEF2E4; --paper:#FFF9EE; --ink:#3A2A1E; --muted:#8A7462; --line:#E1D6C4;
+    --accent:#F6AE6B; --accent-deep:#C77A38; --accent-ink:#3A2A1E;
+    --shadow:0 12px 34px rgba(74,45,30,.18);
+    --glow:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --sky:#1A2A52; --sky2:#2C4270; --sky3:#54608C; --cloud:#B9BFD6; --cloud-shade:#8C93B3; --star:1;
+      --far:#3E5A55; --tree:#2F5A3A; --tree2:#20422A;
+      --wood:#7A5636; --wood2:#553A21; --wood3:#946A45;
+      --soil:#4A2C18; --soil2:#2E1A0C; --soil3:#5E3B24; --hole:#100703;
+      --bg:#171310; --paper:#2A2320; --ink:#F3E9DC; --muted:#B3A08D; --line:#3E342E;
+      --accent:#F6AE6B; --accent-deep:#9E5E22;
+      --shadow:0 12px 34px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --sky:#1A2A52; --sky2:#2C4270; --sky3:#54608C; --cloud:#B9BFD6; --cloud-shade:#8C93B3; --star:1;
+    --far:#3E5A55; --tree:#2F5A3A; --tree2:#20422A;
+    --wood:#7A5636; --wood2:#553A21; --wood3:#946A45;
+    --soil:#4A2C18; --soil2:#2E1A0C; --soil3:#5E3B24; --hole:#100703;
+    --bg:#171310; --paper:#2A2320; --ink:#F3E9DC; --muted:#B3A08D; --line:#3E342E;
+    --accent:#F6AE6B; --accent-deep:#9E5E22;
+    --shadow:0 12px 34px rgba(0,0,0,.5);
+  }
+
+  .tier-N{--tier:#98A5AD; --tier-ink:#FFFFFF}
+  .tier-R{--tier:#4E9BE8; --tier-ink:#FFFFFF}
+  .tier-SR{--tier:#E5B22C; --tier-ink:#3A2A1E}
+  .tier-SSR{--tier:#C084FC; --tier-ink:#FFFFFF}
+
+  *{box-sizing:border-box}
+  [hidden]{display:none!important}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Gowun Dodum',system-ui,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;line-height:1.55}
+  .wrap{max-width:720px;margin:0 auto;padding:28px 18px 56px;display:grid;gap:22px}
+
+  .top{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap}
+  h1{font-family:'Jua';font-weight:400;font-size:clamp(30px,5vw,40px);margin:0;line-height:1.1;letter-spacing:-.01em;text-wrap:balance}
+  .lede{margin:8px 0 0;color:var(--muted);max-width:32em;font-size:15px}
+  .tally{display:flex;gap:22px;margin:0}
+  .tally div{display:grid;gap:2px}
+  .tally dt{font-size:11px;letter-spacing:.12em;color:var(--muted)}
+  .tally dd{margin:0;font-family:'Jua';font-size:28px;line-height:1;font-variant-numeric:tabular-nums}
+  .tally dd small{font-size:14px;font-family:'Gowun Dodum';color:var(--muted);margin-left:2px}
+
+  .stage{position:relative;border-radius:22px;overflow:hidden;box-shadow:var(--shadow);background:var(--sky2);isolation:isolate}
+  .stage svg{display:block;width:100%;height:auto}
+  .stage.shake svg{animation:shake .38s linear}
+  @keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-4px,2px)}40%{transform:translate(4px,-2px)}60%{transform:translate(-3px,-1px)}80%{transform:translate(3px,2px)}}
+
+  /* ---------- actors: every position lives in CSS transforms so rotation pivots stay at local (0,0) ---------- */
+  #pochi{transform:translate(340px,290px);transition:transform .32s ease-out}
+  #pochi.grab{transform:translate(318px,290px)}
+  #pochi.tug{transform:translate(calc(318px - var(--lean)*.6px),290px) rotate(calc(var(--lean)*1deg))}
+  #pochi.strain{transform:translate(298px,290px) rotate(33deg)}
+  #pochi.strain #pochiBody{animation:tremble .09s infinite alternate}
+  #pochi.tumble{transform:translate(360px,270px) rotate(86deg);transition:transform .52s cubic-bezier(.3,1.45,.5,1)}
+  @keyframes tremble{from{transform:translate(-1.5px,0)}to{transform:translate(1.5px,-1.5px)}}
+
+  #arms{transform:translate(-24px,-54px) rotate(96deg);transition:transform .35s cubic-bezier(.34,1.5,.64,1)}
+  #pochi.grab #arms,#pochi.tug #arms,#pochi.strain #arms{transform:translate(-24px,-54px) rotate(152deg)}
+  #pochi.tumble #arms{transform:translate(-24px,-54px) rotate(215deg)}
+  #sweat{opacity:0;transition:opacity .25s}
+  #pochi.tug #sweat,#pochi.strain #sweat{opacity:1}
+  #mouthOpen,#mouthStrain{transition:opacity .15s}
+  #mouthStrain{opacity:0}
+  #pochi.strain #mouthOpen{opacity:0}
+  #pochi.strain #mouthStrain{opacity:1}
+
+  /* the carrot body sits behind Pochi (under the soil), its leaves ride in front of his paws — both groups move as one */
+  #carrotG,#leafG{transform:translate(262px,290px);transition:transform .32s ease-out,opacity .3s}
+  #carrotG.tug,#leafG.tug{transform:translate(calc(262px + var(--lean)*.4px),calc(290px - var(--lift)*1px)) rotate(calc(var(--lean)*1.6deg))}
+  #carrotG.strain,#leafG.strain{transform:translate(280px,calc(282px - var(--lift,40)*1px)) rotate(50deg)}
+  #carrotG.strain #carrotWrap,#leafG.strain #leafWrap{animation:tremble .09s infinite alternate}
+  #carrotG.pop,#leafG.pop{transform:translate(300px,var(--popY,110px)) rotate(38deg) scale(1.08);transition:transform .58s cubic-bezier(.2,1.5,.45,1)}
+  #carrotG.hide,#leafG.hide{opacity:0}
+  .carrot{transform:scale(var(--cs,1))}
+
+  #glow{opacity:0;transition:opacity .35s;mix-blend-mode:screen}
+  #glow.rainbow{animation:hue .9s linear infinite}
+  @keyframes hue{to{filter:hue-rotate(360deg)}}
+
+  .dust{animation:dustfly .75s ease-out forwards}
+  @keyframes dustfly{from{transform:translate(0,0);opacity:1}to{transform:translate(var(--dx),var(--dy));opacity:0}}
+
+  .spark{fill:var(--glow);transform:scale(0);animation:sparkle .8s ease-out forwards}
+  @keyframes sparkle{0%{transform:scale(0) rotate(0);opacity:0}30%{transform:scale(1.2) rotate(40deg);opacity:1}100%{transform:scale(0) rotate(90deg);opacity:0}}
+
+  #burst{opacity:0;transform:translate(300px,130px) scale(0)}
+  #burst.go{animation:burst .75s ease-out forwards}
+  @keyframes burst{0%{transform:translate(300px,130px) scale(.2);opacity:1}100%{transform:translate(300px,130px) scale(1.6);opacity:0}}
+  #burst line{stroke:var(--glow);stroke-width:4;stroke-linecap:round}
+  #burst circle{fill:none;stroke:var(--glow);stroke-width:3}
+
+  /* ---------- controls ---------- */
+  .controls{display:grid;justify-items:center;gap:10px}
+  .pull{font-family:'Jua';font-size:23px;letter-spacing:.02em;padding:14px 44px;border-radius:999px;border:0;background:var(--accent);color:var(--accent-ink);cursor:pointer;box-shadow:0 6px 0 var(--accent-deep);transition:transform .08s,box-shadow .08s;display:inline-flex;align-items:center;gap:10px}
+  .pull:active{transform:translateY(4px);box-shadow:0 2px 0 var(--accent-deep)}
+  .pull:disabled{opacity:.72;cursor:wait;transform:translateY(4px);box-shadow:0 2px 0 var(--accent-deep)}
+  .pull svg{width:22px;height:30px;overflow:visible}
+  .status{margin:0;color:var(--muted);min-height:1.6em;text-align:center;font-size:15px}
+  button:focus-visible{outline:3px solid var(--accent-deep);outline-offset:3px}
+
+  /* ---------- result card ---------- */
+  .result{position:absolute;inset:0;display:grid;place-items:center;background:rgba(22,13,6,.42);backdrop-filter:blur(2px);z-index:2}
+  .card{width:min(330px,88%);background:var(--paper);border-radius:22px;border:3px solid var(--tier);padding:16px 20px 18px;text-align:center;display:grid;gap:8px;justify-items:center;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.35);transform:scale(.6) translateY(20px);opacity:0;transition:transform .5s cubic-bezier(.3,1.5,.5,1),opacity .25s}
+  .result.in .card{transform:none;opacity:1}
+  .card.tier-SSR{border-color:transparent;background:linear-gradient(var(--paper),var(--paper)) padding-box,conic-gradient(from 0deg,#ff6b6b,#ffb347,#ffe66d,#7ee081,#6ec6ff,#c084fc,#ff6b6b) border-box;box-shadow:0 0 0 6px rgba(192,132,252,.25),0 20px 50px rgba(0,0,0,.4)}
+  .rarity{font-size:12px;letter-spacing:.14em;padding:4px 12px;border-radius:999px;background:var(--tier);color:var(--tier-ink);font-weight:700}
+  .stars{font-size:16px;letter-spacing:.1em;color:var(--tier);line-height:1}
+  .card-fig{position:relative;width:150px;height:170px;display:grid;place-items:center}
+  .card-fig::before{content:'';position:absolute;inset:6px;border-radius:50%;background:radial-gradient(circle,var(--tier) 0%,transparent 68%);opacity:.35}
+  .card-fig svg{position:relative;width:150px;height:170px;overflow:visible}
+  .card h2{font-family:'Jua';font-weight:400;font-size:27px;margin:0;line-height:1.1}
+  .card.tier-SSR h2{background:linear-gradient(90deg,#ff6b6b,#ffb347,#ffe66d,#7ee081,#6ec6ff,#c084fc);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .card p{margin:0;color:var(--muted);font-size:14px;max-width:26em;text-wrap:pretty}
+  .card .new{font-size:11px;letter-spacing:.12em;color:var(--accent-deep);font-weight:700}
+  .actions{display:flex;gap:8px;margin-top:6px}
+  .btn{font-family:'Jua';font-size:17px;padding:9px 20px;border-radius:999px;border:2px solid transparent;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+
+  /* ---------- basket ---------- */
+  .basket{border-top:1px solid var(--line);padding-top:18px;display:grid;gap:12px}
+  .basket-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .basket h2{font-family:'Jua';font-weight:400;font-size:20px;margin:0}
+  .rates{margin:0;font-size:12px;color:var(--muted);letter-spacing:.02em;font-variant-numeric:tabular-nums}
+  .history{display:flex;flex-wrap:wrap;gap:8px;min-height:38px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 12px 4px 7px;border-radius:999px;background:var(--paper);border:1.5px solid var(--tier);font-size:13px}
+  .chip svg{width:20px;height:30px;overflow:visible}
+  .chip.tier-SSR{border-color:transparent;background:linear-gradient(var(--paper),var(--paper)) padding-box,conic-gradient(from 0deg,#ff6b6b,#ffb347,#ffe66d,#7ee081,#6ec6ff,#c084fc,#ff6b6b) border-box}
+  .empty{color:var(--muted);font-size:14px;margin:0}
+
+  @media (prefers-reduced-motion: reduce){
+    #pochi,#arms,#carrotG,#glow,.card{transition-duration:.01s}
+    #pochi.strain #pochiBody,#carrotG.strain #carrotWrap,#glow.rainbow,.stage.shake svg{animation:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>포치의 당근밭 뽑기</h1>
+      <p class="lede">포치가 밭에서 당근을 하나 뽑아 올려요. 잎만 봐서는 얼마나 큰 당근이 나올지 아무도 몰라요.</p>
+    </div>
+    <dl class="tally">
+      <div><dt>뽑은 횟수</dt><dd><span id="tCount">0</span><small>회</small></dd></div>
+      <div><dt>울트라 레어</dt><dd><span id="tSSR">0</span><small>개</small></dd></div>
+    </dl>
+  </header>
+
+  <section class="stage" id="stage">
+    <svg id="scene" viewBox="0 0 600 400" role="img" aria-label="포치가 당근밭에서 당근잎을 잡고 서 있는 장면">
+      <defs>
+        <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" style="stop-color:var(--sky)"/><stop offset=".62" style="stop-color:var(--sky2)"/><stop offset="1" style="stop-color:var(--sky3)"/>
+        </linearGradient>
+        <linearGradient id="soilGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" style="stop-color:var(--soil3)"/><stop offset=".35" style="stop-color:var(--soil)"/><stop offset="1" style="stop-color:var(--soil2)"/>
+        </linearGradient>
+        <radialGradient id="clumpGrad" cx=".35" cy=".3" r=".8">
+          <stop offset="0" style="stop-color:var(--soil3)"/><stop offset=".6" style="stop-color:var(--soil)"/><stop offset="1" style="stop-color:var(--soil2)"/>
+        </radialGradient>
+        <radialGradient id="cloudGrad" cx=".4" cy=".3" r=".8">
+          <stop offset="0" style="stop-color:var(--cloud)"/><stop offset=".7" style="stop-color:var(--cloud)"/><stop offset="1" style="stop-color:var(--cloud-shade)"/>
+        </radialGradient>
+        <linearGradient id="woodGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" style="stop-color:var(--wood3)"/><stop offset=".5" style="stop-color:var(--wood)"/><stop offset="1" style="stop-color:var(--wood2)"/>
+        </linearGradient>
+        <radialGradient id="glowGrad">
+          <stop offset="0" style="stop-color:var(--glow)" stop-opacity="1"/><stop offset=".45" style="stop-color:var(--glow)" stop-opacity=".5"/><stop offset="1" style="stop-color:var(--glow)" stop-opacity="0"/>
+        </radialGradient>
+
+        <!-- carrot: turnaround palette #F6AE6B / #E0924B / #7B9E7B, shaded like a soft 3D render -->
+        <radialGradient id="cBody" cx=".32" cy=".26" r=".85">
+          <stop offset="0" stop-color="#FFD39C"/><stop offset=".35" stop-color="#F8B873"/><stop offset=".78" stop-color="#EE9F4F"/><stop offset="1" stop-color="#D4832F"/>
+        </radialGradient>
+        <linearGradient id="cStripe" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0" stop-color="#E0924B"/><stop offset="1" stop-color="#EBA35C"/>
+        </linearGradient>
+        <radialGradient id="cLeaf" cx=".35" cy=".28" r=".85">
+          <stop offset="0" stop-color="#B7CFAD"/><stop offset=".45" stop-color="#8AAB89"/><stop offset=".85" stop-color="#6E9270"/><stop offset="1" stop-color="#587757"/>
+        </radialGradient>
+
+        <!-- pochi: peach-cream skin, cream belly, taupe head-horns -->
+        <radialGradient id="pHead" cx=".36" cy=".3" r=".8">
+          <stop offset="0" stop-color="#FFF8F4"/><stop offset=".4" stop-color="#F9E9E1"/><stop offset=".82" stop-color="#EDD3C8"/><stop offset="1" stop-color="#DCBBAE"/>
+        </radialGradient>
+        <radialGradient id="pSkin" cx=".38" cy=".3" r=".8">
+          <stop offset="0" stop-color="#FFF6F1"/><stop offset=".5" stop-color="#F7E6DD"/><stop offset="1" stop-color="#E0C2B5"/>
+        </radialGradient>
+        <radialGradient id="pBelly" cx=".4" cy=".3" r=".8">
+          <stop offset="0" stop-color="#FFFEFC"/><stop offset="1" stop-color="#F1E8DF"/>
+        </radialGradient>
+        <radialGradient id="pEar" cx=".36" cy=".28" r=".85">
+          <stop offset="0" stop-color="#DCCBBF"/><stop offset=".55" stop-color="#BBA294"/><stop offset="1" stop-color="#957C6D"/>
+        </radialGradient>
+
+        <filter id="blur1" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.1"/></filter>
+        <filter id="blur2" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="2.2"/></filter>
+        <filter id="blur3" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.2"/></filter>
+        <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>
+
+        <!-- a carrot top peeking out of the soil: three leaf blobs + the orange dome -->
+        <g id="ctop">
+          <ellipse cx="0" cy="2" rx="17" ry="9" fill="url(#cBody)"/>
+          <ellipse cx="-13" cy="-15" rx="8.5" ry="13" transform="rotate(-30 -13 -15)" fill="url(#cLeaf)"/>
+          <ellipse cx="13" cy="-15" rx="8.5" ry="13" transform="rotate(30 13 -15)" fill="url(#cLeaf)"/>
+          <ellipse cx="0" cy="-20" rx="9.5" ry="16" fill="url(#cLeaf)"/>
+        </g>
+      </defs>
+
+      <!-- sky -->
+      <rect width="600" height="400" fill="url(#skyGrad)"/>
+      <g style="opacity:var(--star)" fill="#fff">
+        <circle cx="60" cy="50" r="1.6"/><circle cx="140" cy="90" r="1.2"/><circle cx="230" cy="40" r="1.8"/><circle cx="330" cy="75" r="1.3"/>
+        <circle cx="420" cy="30" r="1.5"/><circle cx="520" cy="95" r="1.2"/><circle cx="560" cy="45" r="1.7"/>
+      </g>
+      <g fill="url(#cloudGrad)" filter="url(#blur1)">
+        <ellipse cx="90" cy="70" rx="58" ry="20"/><ellipse cx="115" cy="56" rx="34" ry="24"/><ellipse cx="60" cy="62" rx="28" ry="18"/>
+        <ellipse cx="330" cy="52" rx="40" ry="14"/><ellipse cx="350" cy="42" rx="24" ry="16"/>
+        <ellipse cx="520" cy="96" rx="62" ry="20"/><ellipse cx="545" cy="80" rx="36" ry="24"/><ellipse cx="490" cy="88" rx="30" ry="18"/>
+      </g>
+
+      <!-- far hills & tree line, out of focus -->
+      <g filter="url(#blur3)">
+        <ellipse cx="150" cy="215" rx="240" ry="48" style="fill:var(--far)"/>
+        <ellipse cx="470" cy="222" rx="260" ry="44" style="fill:var(--far)"/>
+        <g style="fill:var(--tree2)"><circle cx="20" cy="190" r="34"/><circle cx="66" cy="182" r="30"/><circle cx="560" cy="186" r="36"/><circle cx="600" cy="176" r="32"/></g>
+        <g style="fill:var(--tree)"><circle cx="30" cy="178" r="26"/><circle cx="574" cy="174" r="28"/><circle cx="430" cy="206" r="22"/><circle cx="380" cy="212" r="18"/></g>
+      </g>
+
+      <!-- fence, sign, crate (slightly soft) -->
+      <g filter="url(#blur1)">
+        <rect x="120" y="226" width="360" height="7" rx="3" fill="url(#woodGrad)"/>
+        <rect x="120" y="246" width="360" height="7" rx="3" fill="url(#woodGrad)"/>
+        <g fill="url(#woodGrad)">
+          <rect x="160" y="212" width="11" height="52" rx="4"/><rect x="250" y="212" width="11" height="52" rx="4"/>
+          <rect x="340" y="212" width="11" height="52" rx="4"/><rect x="430" y="212" width="11" height="52" rx="4"/>
+        </g>
+        <!-- sign with the carrot mark -->
+        <rect x="66" y="196" width="12" height="76" rx="4" fill="url(#woodGrad)"/>
+        <rect x="30" y="150" width="84" height="54" rx="6" fill="url(#woodGrad)"/>
+        <rect x="30" y="176" width="84" height="2" style="fill:var(--wood2)" opacity=".7"/>
+        <g transform="translate(72 158) scale(.26)">
+          <ellipse cx="-16" cy="-24" rx="12" ry="18" transform="rotate(-28 -16 -24)" fill="url(#cLeaf)"/>
+          <ellipse cx="16" cy="-24" rx="12" ry="18" transform="rotate(28 16 -24)" fill="url(#cLeaf)"/>
+          <ellipse cx="0" cy="-30" rx="14" ry="22" fill="url(#cLeaf)"/>
+          <path d="M0 -4 C 42 -4 46 40 40 70 C 34 96 16 116 0 122 C -16 116 -34 96 -40 70 C -46 40 -42 -4 0 -4 Z" fill="url(#cBody)"/>
+          <g fill="url(#cStripe)"><rect x="-36" y="18" width="34" height="11" rx="5.5" transform="rotate(-6 -36 18)"/><rect x="-34" y="48" width="28" height="10" rx="5"/><rect x="-28" y="78" width="20" height="9" rx="4.5" transform="rotate(8 -28 78)"/></g>
+        </g>
+        <!-- crate of harvested carrots -->
+        <rect x="486" y="238" width="86" height="44" rx="4" fill="url(#woodGrad)"/>
+        <rect x="486" y="252" width="86" height="3" style="fill:var(--wood2)" opacity=".6"/><rect x="486" y="266" width="86" height="3" style="fill:var(--wood2)" opacity=".6"/>
+        <ellipse cx="506" cy="242" rx="14" ry="8" fill="url(#cBody)"/><ellipse cx="530" cy="240" rx="15" ry="8" fill="url(#cBody)"/><ellipse cx="554" cy="242" rx="14" ry="8" fill="url(#cBody)"/>
+      </g>
+
+      <!-- back soil surface and the far rows of carrot tops -->
+      <rect x="0" y="262" width="600" height="30" fill="url(#soilGrad)"/>
+      <g filter="url(#blur1)">
+        <use href="#ctop" transform="translate(40 268) scale(.55)"/><use href="#ctop" transform="translate(100 272) scale(.6)"/>
+        <use href="#ctop" transform="translate(160 268) scale(.55)"/><use href="#ctop" transform="translate(440 270) scale(.6)"/>
+        <use href="#ctop" transform="translate(500 274) scale(.62)"/><use href="#ctop" transform="translate(560 268) scale(.58)"/>
+        <use href="#ctop" transform="translate(200 284) scale(.7)"/><use href="#ctop" transform="translate(480 288) scale(.72)"/>
+      </g>
+
+      <!-- the hole and the hero carrot (its underground part is covered by the front soil drawn after it) -->
+      <ellipse cx="262" cy="291" rx="26" ry="8" style="fill:var(--hole)"/>
+      <g id="carrotG"><g id="carrotWrap"></g></g>
+
+      <!-- front soil -->
+      <rect x="0" y="290" width="600" height="110" fill="url(#soilGrad)"/>
+      <g fill="url(#clumpGrad)">
+        <circle cx="40" cy="300" r="7"/><circle cx="130" cy="312" r="5"/><circle cx="215" cy="300" r="6"/><circle cx="300" cy="306" r="5"/>
+        <circle cx="420" cy="298" r="7"/><circle cx="470" cy="312" r="5"/><circle cx="560" cy="304" r="6"/><circle cx="90" cy="332" r="8"/>
+        <circle cx="360" cy="330" r="6"/><circle cx="520" cy="338" r="9"/><circle cx="180" cy="344" r="7"/><circle cx="270" cy="322" r="5"/>
+        <circle cx="240" cy="296" r="6"/><circle cx="286" cy="302" r="5"/>
+      </g>
+      <use href="#ctop" transform="translate(70 318) scale(.9)"/>
+      <use href="#ctop" transform="translate(150 306) scale(.8)"/>
+      <use href="#ctop" transform="translate(480 322) scale(.9)"/>
+      <use href="#ctop" transform="translate(550 306) scale(.82)"/>
+
+      <!-- rarity light leaking from the hole -->
+      <circle id="glow" cx="262" cy="290" r="100" fill="url(#glowGrad)"/>
+
+      <!-- Pochi; feet at local (0,0), facing left toward the carrot -->
+      <g id="pochi">
+        <g id="pochiBody">
+          <ellipse cx="4" cy="3" rx="42" ry="7" fill="rgba(60,30,15,.28)" filter="url(#soft)"/>
+          <circle cx="34" cy="-42" r="11" fill="url(#pSkin)"/>
+          <ellipse cx="14" cy="-5" rx="15" ry="9" fill="url(#pSkin)"/>
+          <path d="M-30 -92 C -46 -72 -44 -22 -22 -9 C -8 -2 8 -2 22 -9 C 44 -22 46 -72 30 -92 Z" fill="url(#pSkin)"/>
+          <ellipse cx="-8" cy="-40" rx="22" ry="27" fill="url(#pBelly)"/>
+          <ellipse cx="-12" cy="-4" rx="15" ry="9" fill="url(#pSkin)"/>
+          <ellipse cx="-4" cy="-86" rx="40" ry="10" fill="rgba(90,55,45,.28)" filter="url(#soft)"/>
+          <g id="arms">
+            <rect x="-2" y="2" width="44" height="16" rx="8" fill="url(#pSkin)"/>
+            <rect x="0" y="-9" width="46" height="16" rx="8" fill="url(#pSkin)"/>
+          </g>
+          <ellipse cx="16" cy="-210" rx="13" ry="16" fill="url(#pEar)"/>
+          <ellipse cx="36" cy="-202" rx="12" ry="15" fill="url(#pEar)"/>
+          <circle cx="-6" cy="-150" r="64" fill="url(#pHead)"/>
+          <ellipse cx="-58" cy="-138" rx="9" ry="5" fill="#F3B1B4" opacity=".55" filter="url(#blur1)"/>
+          <ellipse cx="6" cy="-128" rx="10" ry="6" fill="#F3B1B4" opacity=".5" filter="url(#blur1)"/>
+          <circle cx="-48" cy="-160" r="3.6" fill="#2E211B"/>
+          <circle cx="-4" cy="-156" r="3.6" fill="#2E211B"/>
+          <path d="M-43 -197 L-36 -179" stroke="#3B2A22" stroke-width="5" stroke-linecap="round" fill="none"/>
+          <circle cx="-41" cy="-150" r="3" fill="#F0959B"/>
+          <g id="mouthOpen">
+            <ellipse cx="-36" cy="-132" rx="10" ry="14" transform="rotate(-16 -36 -132)" fill="#B5362B" stroke="#3B2A22" stroke-width="3.5"/>
+            <rect x="-42" y="-145" width="7" height="6" rx="2" fill="#fff"/>
+          </g>
+          <g id="mouthStrain">
+            <ellipse cx="-36" cy="-130" rx="12" ry="8" fill="#B5362B" stroke="#3B2A22" stroke-width="3.5"/>
+            <rect x="-40" y="-136" width="8" height="5" rx="2" fill="#fff"/>
+          </g>
+          <g id="sweat" fill="#fff">
+            <path d="M62 -196 C 66 -186 70 -184 66 -178 C 62 -182 58 -188 62 -196 Z"/>
+            <path d="M70 -172 C 73 -164 76 -163 73 -158 C 69 -161 67 -166 70 -172 Z"/>
+          </g>
+        </g>
+      </g>
+
+      <g id="leafG"><g id="leafWrap"></g></g>
+      <g id="dust"></g>
+      <g id="sparkles"></g>
+      <g id="burst">
+        <circle r="46"/>
+        <line x1="0" y1="-56" x2="0" y2="-84"/><line x1="0" y1="-56" x2="0" y2="-84" transform="rotate(30)"/><line x1="0" y1="-56" x2="0" y2="-84" transform="rotate(60)"/>
+        <line x1="0" y1="-56" x2="0" y2="-84" transform="rotate(90)"/><line x1="0" y1="-56" x2="0" y2="-84" transform="rotate(120)"/><line x1="0" y1="-56" x2="0" y2="-84" transform="rotate(150)"/>
+        <line x1="0" y1="-56" x2="0" y2="-84" transform="rotate(180)"/><line x1="0" y1="-56" x2="0" y2="-84" transform="rotate(210)"/><line x1="0" y1="-56" x2="0" y2="-84" transform="rotate(240)"/>
+        <line x1="0" y1="-56" x2="0" y2="-84" transform="rotate(270)"/><line x1="0" y1="-56" x2="0" y2="-84" transform="rotate(300)"/><line x1="0" y1="-56" x2="0" y2="-84" transform="rotate(330)"/>
+      </g>
+
+      <!-- foreground carrot tops and clods, out of focus like a shallow lens -->
+      <g filter="url(#blur3)">
+        <use href="#ctop" transform="translate(20 392) scale(1.7)"/>
+        <use href="#ctop" transform="translate(150 404) scale(1.5)"/>
+        <use href="#ctop" transform="translate(400 402) scale(1.6)"/>
+        <use href="#ctop" transform="translate(575 390) scale(1.5)"/>
+        <g fill="url(#clumpGrad)"><circle cx="90" cy="386" r="13"/><circle cx="300" cy="392" r="10"/><circle cx="490" cy="388" r="12"/></g>
+      </g>
+    </svg>
+
+    <div id="result" class="result" hidden>
+      <div class="card" id="card">
+        <span class="rarity" id="cRarity">레어</span>
+        <span class="stars" id="cStars">★★</span>
+        <div class="card-fig"><svg viewBox="-90 -100 180 270" aria-hidden="true"><g id="cardCarrot"></g></svg></div>
+        <span class="new" id="cNew" hidden>처음 뽑은 당근</span>
+        <h2 id="cName">큰 당근</h2>
+        <p id="cDesc"></p>
+        <div class="actions">
+          <button class="btn" id="again">다시 뽑기</button>
+          <button class="btn ghost" id="close">밭으로</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="controls">
+    <button class="pull" id="pullBtn">
+      <svg viewBox="-46 -54 92 180" aria-hidden="true"><g id="btnCarrot"></g></svg>
+      당근 뽑기
+    </button>
+    <p class="status" id="status" aria-live="polite">포치가 당근잎 앞에서 기다리고 있어요.</p>
+  </div>
+
+  <section class="basket">
+    <div class="basket-head">
+      <h2>오늘의 수확</h2>
+      <p class="rates">확률 · 일반 60% · 레어 28% · 슈퍼 레어 10% · 울트라 레어 2%</p>
+    </div>
+    <div class="history" id="history"></div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const NS='http://www.w3.org/2000/svg';
+  const $=s=>document.querySelector(s);
+  const svg=$('#scene'), stage=$('#stage'), pochi=$('#pochi'), carrotG=$('#carrotG'), wrap=$('#carrotWrap'), leafG=$('#leafG'), leafWrap=$('#leafWrap'),
+        glow=$('#glow'), dust=$('#dust'), sparkles=$('#sparkles'), burst=$('#burst'),
+        btn=$('#pullBtn'), status=$('#status'), result=$('#result'), card=$('#card'), history=$('#history');
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sleep=ms=>new Promise(r=>setTimeout(r,reduce?Math.min(ms,60):ms));
+  const rand=(a,b)=>a+Math.random()*(b-a);
+
+  const TIERS={
+    N:  {label:'일반',      stars:1, rate:60, glow:'#ffffff', glowMax:.35, tugs:2},
+    R:  {label:'레어',      stars:2, rate:28, glow:'#6fb6ff', glowMax:.65, tugs:3},
+    SR: {label:'슈퍼 레어',  stars:3, rate:10, glow:'#ffd54a', glowMax:.85, tugs:4},
+    SSR:{label:'울트라 레어',stars:4, rate:2,  glow:'#ff7ad9', glowMax:.95, tugs:5},
+  };
+  // one carrot design (the turnaround), five sizes — rarity is how much of it was hiding underground
+  const CARROTS=[
+    {id:'baby',   tier:'N',   w:1, name:'꼬마 당근',    cs:.5,  desc:'조금 일찍 뽑힌 한입 크기 당근. 포치 손바닥만 해요.'},
+    {id:'plain',  tier:'N',   w:2, name:'보통 당근',    cs:.72, desc:'밭에서 가장 흔한 크기. 포동포동하고 아삭해요.'},
+    {id:'big',    tier:'R',   w:1, name:'큰 당근',      cs:.92, desc:'햇빛을 많이 받아 통통하게 자란 당근.'},
+    {id:'king',   tier:'SR',  w:1, name:'왕당근',       cs:1.15,desc:'포치 몸통만 한 당근. 뽑는 데 온 힘을 다 썼어요.'},
+    {id:'legend', tier:'SSR', w:1, name:'전설의 왕당근', cs:1.4, desc:'포치보다 큰 당근. 뽑는 순간 밭 전체가 흔들렸어요.'},
+  ];
+
+  const LEAVES=`<ellipse cx="-17" cy="-24" rx="12" ry="18" transform="rotate(-28 -17 -24)" fill="url(#cLeaf)"/>
+      <ellipse cx="17" cy="-24" rx="12" ry="18" transform="rotate(28 17 -24)" fill="url(#cLeaf)"/>
+      <ellipse cx="0" cy="-31" rx="14" ry="22" fill="url(#cLeaf)"/>
+      <ellipse cx="-4" cy="-40" rx="5" ry="8" fill="#fff" opacity=".18" transform="rotate(-10 -4 -40)"/>`;
+  const BODY=`<path d="M0 -4 C 42 -4 46 40 40 70 C 34 96 16 116 0 122 C -16 116 -34 96 -40 70 C -46 40 -42 -4 0 -4 Z" fill="url(#cBody)"/>
+      <g fill="url(#cStripe)">
+        <rect x="-36" y="18" width="34" height="11" rx="5.5" transform="rotate(-6 -36 18)"/>
+        <rect x="-34" y="48" width="28" height="10" rx="5"/>
+        <rect x="-28" y="78" width="20" height="9" rx="4.5" transform="rotate(8 -28 78)"/>
+      </g>
+      <ellipse cx="14" cy="26" rx="8" ry="16" fill="#fff" opacity=".22" transform="rotate(12 14 26)"/>`;
+  function carrotMarkup(part){
+    const inner=part==='leaves'?LEAVES:part==='body'?BODY:LEAVES+BODY;
+    return `<g class="carrot">${inner}</g>`;
+  }
+  function paint(host,c,part){
+    host.innerHTML=carrotMarkup(part||'all');
+    host.querySelector('.carrot').style.setProperty('--cs',c.cs);
+  }
+  // scene carrot = body group (behind Pochi) + leaf group (in front of his paws), always classed together
+  function paintScene(c){ paint(wrap,c,'body'); paint(leafWrap,c,'leaves'); }
+  function cc(action,...cls){ [carrotG,leafG].forEach(g=>g.classList[action](...cls)); }
+
+  // ---------- sound (tiny synthesized cues, no files) ----------
+  let ac=null;
+  function tone(f0,f1,dur,type,vol){
+    try{
+      ac=ac||new (window.AudioContext||window.webkitAudioContext)();
+      const o=ac.createOscillator(), g=ac.createGain(), t=ac.currentTime;
+      o.type=type||'sine'; o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+      g.gain.setValueAtTime(vol||.12,t); g.gain.exponentialRampToValueAtTime(.001,t+dur);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t+dur);
+    }catch(e){}
+  }
+
+  // ---------- particles ----------
+  function puff(n,spread){
+    for(let i=0;i<n;i++){
+      const el=document.createElementNS(NS,'circle');
+      el.setAttribute('cx',262+rand(-24,24)); el.setAttribute('cy',290+rand(-2,4)); el.setAttribute('r',rand(3,7));
+      el.setAttribute('class','dust'); el.setAttribute('fill','url(#clumpGrad)');
+      el.style.setProperty('--dx',rand(-50,60)*spread+'px'); el.style.setProperty('--dy',-rand(20,70)*spread+'px');
+      el.style.animationDuration=rand(.5,.95)+'s';
+      el.addEventListener('animationend',()=>el.remove()); dust.appendChild(el);
+    }
+  }
+  function spark(n){
+    for(let i=0;i<n;i++){
+      const g=document.createElementNS(NS,'g');
+      g.style.transform=`translate(${262+rand(-70,90)}px,${290+rand(-90,10)}px)`;
+      const p=document.createElementNS(NS,'path');
+      p.setAttribute('d','M0 -7 L1.8 -1.8 L7 0 L1.8 1.8 L0 7 L-1.8 1.8 L-7 0 L-1.8 -1.8 Z');
+      p.setAttribute('class','spark'); p.style.animationDelay=rand(0,.4)+'s';
+      p.addEventListener('animationend',()=>g.remove()); g.appendChild(p); sparkles.appendChild(g);
+    }
+  }
+
+  // ---------- state ----------
+  let busy=false, log=[];
+  try{ log=JSON.parse(localStorage.getItem('pochi-carrot-gacha-v1')||'[]'); if(!Array.isArray(log)) log=[]; }catch(e){ log=[]; }
+  function save(){ try{ localStorage.setItem('pochi-carrot-gacha-v1',JSON.stringify(log.slice(-200))); }catch(e){} }
+
+  function roll(){
+    const r=Math.random()*100; let acc=0, tier='N';
+    for(const k of ['N','R','SR','SSR']){ acc+=TIERS[k].rate; if(r<acc){ tier=k; break; } }
+    const pool=CARROTS.filter(c=>c.tier===tier);
+    const total=pool.reduce((s,c)=>s+c.w,0); let x=Math.random()*total;
+    for(const c of pool){ x-=c.w; if(x<0) return c; }
+    return pool[pool.length-1];
+  }
+
+  function renderHistory(){
+    $('#tCount').textContent=log.length;
+    $('#tSSR').textContent=log.filter(e=>e.tier==='SSR').length;
+    history.innerHTML='';
+    if(!log.length){ const p=document.createElement('p'); p.className='empty'; p.textContent='아직 뽑은 당근이 없어요. 바구니가 비어 있어요.'; history.appendChild(p); return; }
+    log.slice(-14).reverse().forEach(e=>{
+      const c=CARROTS.find(x=>x.id===e.id)||CARROTS[1];
+      const chip=document.createElement('span'); chip.className='chip tier-'+c.tier; chip.title=TIERS[c.tier].label;
+      chip.innerHTML=`<svg viewBox="-46 -54 92 180" aria-hidden="true"><g></g></svg><span>${c.name}</span>`;
+      paint(chip.querySelector('g'),{cs:1}); history.appendChild(chip);
+    });
+  }
+
+  function showResult(c,isNew){
+    const t=TIERS[c.tier];
+    card.className='card tier-'+c.tier;
+    $('#cRarity').textContent=t.label;
+    $('#cStars').textContent='★'.repeat(t.stars)+'☆'.repeat(4-t.stars);
+    $('#cName').textContent=c.name; $('#cDesc').textContent=c.desc; $('#cNew').hidden=!isNew;
+    paint($('#cardCarrot'),c);
+    result.hidden=false; requestAnimationFrame(()=>requestAnimationFrame(()=>result.classList.add('in')));
+    $('#again').focus();
+  }
+  function hideResult(){ result.classList.remove('in'); result.hidden=true; }
+
+  function resetScene(){
+    pochi.classList.remove('grab','tug','strain','tumble');
+    glow.style.opacity=0; glow.classList.remove('rainbow');
+    cc('add','hide');
+    [carrotG,leafG].forEach(g=>{ g.style.transition='none'; });
+    cc('remove','tug','strain','pop');
+    void carrotG.getBoundingClientRect();
+    [carrotG,leafG].forEach(g=>{ g.style.transition=''; });
+    cc('remove','hide');
+    btn.disabled=false; busy=false;
+  }
+
+  const TUG_LINES=['영차…','영차, 영차…','으으… 꽤 깊이 박혔어요','흙 속에서 뭔가 빛나요!','밭이 통째로 흔들려요!!'];
+
+  async function pull(){
+    if(busy) return; busy=true; btn.disabled=true;
+    const c=roll(), t=TIERS[c.tier];
+    paintScene(c);
+    svg.style.setProperty('--glow',t.glow);
+    svg.style.setProperty('--popY',(290-122*c.cs-44)+'px');
+    glow.classList.toggle('rainbow',c.tier==='SSR');
+
+    status.textContent='포치가 당근잎을 꽉 잡았어요.';
+    pochi.classList.add('grab'); await sleep(540);
+
+    const leans=[10,16,22,26,30], lifts=[22,36,48,58,66];
+    for(let i=0;i<t.tugs;i++){
+      status.textContent=TUG_LINES[i];
+      svg.style.setProperty('--lean',leans[i]); svg.style.setProperty('--lift',lifts[i]*(.6+c.cs*.5));
+      pochi.classList.add('tug'); cc('add','tug');
+      tone(160,110,.12,'triangle',.08); puff(3+i*2,.6+i*.2);
+      glow.style.opacity=t.glowMax*((i+1)/(t.tugs+1));
+      if(i>=2) spark(3);
+      await sleep(320);
+      pochi.classList.remove('tug'); cc('remove','tug');
+      await sleep(i===t.tugs-1?180:280);
+    }
+
+    // final strain — the tell: the longer Pochi holds on, the bigger the carrot
+    status.textContent='으랏차차…!';
+    pochi.classList.add('strain'); cc('add','strain');
+    glow.style.opacity=t.glowMax;
+    if(c.tier==='SR'||c.tier==='SSR'){ stage.classList.add('shake'); spark(10); }
+    const hold={N:450,R:650,SR:1000,SSR:1400}[c.tier];
+    const half=setTimeout(()=>{ puff(8,1.1); if(c.tier==='SSR') spark(8); },hold/2);
+    await sleep(hold); clearTimeout(half);
+    stage.classList.remove('shake');
+
+    // pop
+    status.textContent='뽑혔다!';
+    pochi.classList.remove('strain'); cc('remove','strain');
+    pochi.classList.add('tumble'); cc('add','pop');
+    puff(18,1.7); burst.classList.remove('go'); void burst.getBoundingClientRect(); burst.classList.add('go');
+    tone(720,180,.2,'sine',.18);
+    if(c.tier==='SR'||c.tier==='SSR'){ setTimeout(()=>tone(880,880,.18,'sine',.1),150); setTimeout(()=>tone(1320,1320,.3,'sine',.1),330); }
+    if(c.tier==='SSR') spark(14);
+    glow.style.opacity=0;
+    await sleep(780);
+
+    const isNew=!log.some(e=>e.id===c.id);
+    log.push({id:c.id,tier:c.tier,at:Date.now()}); save(); renderHistory();
+    status.textContent=`${t.label} 등급 · ${c.name}`;
+    showResult(c,isNew);
+  }
+
+  btn.addEventListener('click',pull);
+  $('#close').addEventListener('click',()=>{ hideResult(); resetScene(); status.textContent='포치가 툭툭 털고 일어났어요.'; });
+  $('#again').addEventListener('click',async()=>{ hideResult(); resetScene(); await sleep(440); pull(); });
+
+  // first frame: a carrot top waiting in the ground, Pochi at rest beside it
+  paintScene(CARROTS[1]); paint($('#btnCarrot'),{cs:1});
+  renderHistory();
+})();
+</script>
+</body>
+</html>
